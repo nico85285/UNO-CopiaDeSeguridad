@@ -1,7 +1,7 @@
 package uno.App;
 
 import uno.consola.JuegoConsola;
-import uno.vista.MenuPrincipal;   // Ajustá este import según tu paquete real
+import uno.vista.MenuPrincipal;
 
 import javax.swing.*;
 import java.util.Scanner;

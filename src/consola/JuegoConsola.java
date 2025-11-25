@@ -3,7 +3,7 @@ package uno.consola;
 import uno.modelo.Carta;
 import uno.modelo.Juego;
 import uno.modelo.Jugador;
-import uno.persistencia.SistemaPuntuacion;
+
 
 import java.util.ArrayList;
 import java.util.List;

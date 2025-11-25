@@ -1,7 +1,7 @@
 package uno.controlador;
 import uno.modelo.Carta;
 import uno.modelo.*;
-import uno.observer.*;
+
 
 public class ControladorJuego {
     private Juego modelo;
