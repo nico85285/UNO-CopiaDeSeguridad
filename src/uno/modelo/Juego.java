@@ -1,103 +1,74 @@
 package uno.modelo;
 import uno.persistencia.SistemaPuntuacion;
 import uno.observer.Sujeto;
-import javax.swing.*;
 import java.util.List;
-import java.awt.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 public class Juego extends Sujeto {
 
     private Mazo mazo;
     private ArrayList<Jugador> jugadores;
-    private ArrayList<Carta> pila;
-
+    private ManejadorPila manejadorPila;
+    private ManejadorTurnos manejadorTurnos;
+    private GestorEfectos gestorEfectos;
+    private GestorPuntuacion gestorPuntuacion;
 
     private Jugador ganadorRonda = null;
+    private Jugador ganadorPartida = null;
+    private static final int PUNTOS_META = 100;
 
     private Carta.Color colorActual;
     private Carta.Valor valorActual;
-    private boolean direccion; // false = horario, true = antihorario
-    private int jugadorActual;
 
-    // Puntuaciones
-    private Jugador ganadorPartida = null;
-    private static final int PUNTOS_META = 100;                   // PUNTOS PARA GANAR LA PARTIDA !!!!!!!!!!!!!!!!
-
-    // ==============================
-    // CONSTRUCTOR
-    // ==============================
+    private boolean yaRoboEnEsteTurno = false;
 
     public Juego(String[] idsJugadores) {
         mazo = new Mazo();
         mazo.armarMazo();
         mazo.mezclar();
 
-        pila = new ArrayList<>();
         jugadores = new ArrayList<>();
-
-        // Crear jugadores y repartir 7
         for (String id : idsJugadores) {
-            Jugador j = new Jugador(id);
-            j.agregarCartas(mazo.robarCarta(7));
-            jugadores.add(j);
+            jugadores.add(new Jugador(id));
         }
 
-        jugadorActual = 0;
-        direccion = false;
+        manejadorPila = new ManejadorPila();
+        manejadorTurnos = new ManejadorTurnos(jugadores.size());
+        gestorEfectos = new GestorEfectos();
+        gestorPuntuacion = new GestorPuntuacion();
 
-        // Primera carta en la mesa
-        Carta primera = mazo.robarCarta();
-        while (primera.getValor() == Carta.Valor.Wild ||
-                primera.getValor() == Carta.Valor.WildCuatro ||
-                primera.getValor() == Carta.Valor.Skip ||
-                primera.getValor() == Carta.Valor.Reversa ||
-                primera.getValor() == Carta.Valor.RobarDos) {
+        repartirInicial();
 
-            mazo.agregarCarta(primera);
-            mazo.mezclar();
-            primera = mazo.robarCarta();
-        }
-
-        pila.add(primera);
-        colorActual = primera.getColor();
-        valorActual = primera.getValor();
+        Carta inicial = manejadorPila.colocarInicialValida(mazo);
+        colorActual = inicial.getColor();
+        valorActual = inicial.getValor();
     }
 
-    // ==============================
-    // GETTERS
-    // ==============================
+    private void avanzarTurno() {
+        manejadorTurnos.avanzarTurno();
+        yaRoboEnEsteTurno = false;
+    }
 
-    public Jugador getJugadorActual() { return jugadores.get(jugadorActual); }
-    public Carta getTope() { return pila.isEmpty() ? null : pila.get(pila.size() - 1); }
+    public Jugador getJugadorActual() {
+        return jugadores.get(manejadorTurnos.getJugadorActualIndex());
+    }
+
+    public Carta getTope() { return manejadorPila.getTope(); }
     public Carta.Color getColorActual() { return colorActual; }
     public Carta.Valor getValorActual() { return valorActual; }
     public Jugador getGanadorPartida() { return ganadorPartida; }
-
-    public Jugador getGanadorRonda() {
-        return ganadorRonda;
-    }
-
-    public List<Jugador> getListaJugadores() {
-        return jugadores;
-    }
-
-    public void clearGanadorRonda() {
-        ganadorRonda = null;
-    }
-
+    public Jugador getGanadorRonda() { return ganadorRonda; }
+    public List<Jugador> getListaJugadores() { return jugadores; }
+    public void clearGanadorRonda() { ganadorRonda = null; }
     public int getCantidadJugadores() { return jugadores.size(); }
 
     public ArrayList<Carta> getManoJugador(String id) {
-        for (Jugador j : jugadores)
-            if (j.getId().equals(id)) return j.getMano();
+        for (Jugador j : jugadores) if (j.getId().equals(id)) return j.getMano();
         return null;
     }
 
-    // ==============================
-    // MECÁNICA BÁSICA
-    // ==============================
+    //-----------------------------------------------------------------------------------------------
+    // Lógica principal
 
     public boolean puedeJugar(Carta carta) {
         return carta.getColor() == colorActual ||
@@ -109,47 +80,57 @@ public class Juego extends Sujeto {
             throws InvalidPlayException {
 
         Jugador jugador = getJugadorPorId(idJugador);
-
         if (jugador != getJugadorActual())
             throw new InvalidPlayException("No es tu turno.");
 
         if (!puedeJugar(carta))
-            throw new InvalidPlayException("La carta no coincide con el color o valor actual.");
+            throw new InvalidPlayException("La carta no coincide.");
 
-        // Colocar carta
+
+        yaRoboEnEsteTurno = false;
+
         jugador.removerCarta(carta);
-        pila.add(carta);
+        manejadorPila.agregarCarta(carta);
 
         colorActual = carta.getColor();
         valorActual = carta.getValor();
 
-        aplicarEfectoCarta(carta, colorElegido);
+        GestorEfectos.EfectoAccion accion = gestorEfectos.evaluar(carta, colorElegido);
 
-        // =============================
-        // ¿GANÓ LA RONDA?
-        // =============================
-        if (jugador.getMano().isEmpty()) {
+        if (accion.invertir) manejadorTurnos.invertirDireccion();
 
-            int puntosRonda = calcularPuntosRonda(jugador);
+        if (accion.cartasARobar > 0) {
+            avanzarTurno();
+            Jugador objetivo = getJugadorActual();
+
+            for (int i = 0; i < accion.cartasARobar; i++) {
+                if (mazo.isEmpty()) {
+                    mazo.rearmarDesdePila(manejadorPila.getPila());
+                }
+                objetivo.agregarCarta(mazo.robarCarta());
+            }
+        }
+
+        if (accion.saltar) avanzarTurno();
+
+        if (accion.colorDeclarado != null &&
+                (carta.getValor() == Carta.Valor.Wild || carta.getValor() == Carta.Valor.WildCuatro)) {
+            colorActual = accion.colorDeclarado;
+        }
+
+        if (jugador.getMano().isEmpty()) {                                                    // PARA SABER SI GANO LA RONDA
+            int puntosRonda = gestorPuntuacion.calcularPuntosRonda(jugadores, jugador);
             jugador.sumarPuntos(puntosRonda);
-
-            ganadorRonda = jugador;   // 🔥 IMPORTANTE
-
-            // Notificar ANTES
+            ganadorRonda = jugador;
             notificar();
 
-            // Si ganó la partida completa
             if (jugador.getPuntaje() >= PUNTOS_META) {
                 ganadorPartida = jugador;
-
-                // 🔥 Guardar score permanente
                 SistemaPuntuacion.agregarScore(jugador);
-
-                notificar();                                 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                notificar();
                 return;
             }
 
-            // Si NO ganó la partida -> arrancar nueva ronda
             reiniciarRonda();
             return;
         }
@@ -158,168 +139,86 @@ public class Juego extends Sujeto {
         notificar();
     }
 
-    // ==============================
-    // EFECTO DE CARTAS ESPECIALES
-    // ==============================
 
-    private void aplicarEfectoCarta(Carta carta, Carta.Color colorElegido) {
-
-        switch (carta.getValor()) {
-
-            case RobarDos -> {
-                avanzarTurno();
-                Jugador j = getJugadorActual();
-                j.agregarCarta(mazo.robarCarta());
-                j.agregarCarta(mazo.robarCarta());
-            }
-
-            case Skip -> {
-                avanzarTurno();
-            }
-
-            case Reversa -> {
-                direccion = !direccion;
-            }
-
-            case Wild -> {
-                colorActual = colorElegido;
-            }
-
-            case WildCuatro -> {
-                colorActual = colorElegido;
-                avanzarTurno();
-                Jugador j = getJugadorActual();
-                for (int i = 0; i < 4; i++) j.agregarCarta(mazo.robarCarta());
-            }
-        }
-    }
-
-    // ==============================
-    // PUNTUACIÓN DE LA RONDA
-    // ==============================
-
-    private int valorCarta(Carta c) {
-        switch (c.getValor()) {
-            case Cero: return 0;
-            case Uno: return 1;
-            case Dos: return 2;
-            case Tres: return 3;
-            case Cuatro: return 4;
-            case Cinco: return 5;
-            case Seis: return 6;
-            case Siete: return 7;
-            case Ocho: return 8;
-            case Nueve: return 9;
-            case RobarDos, Skip, Reversa: return 20;
-            case Wild, WildCuatro: return 50;
-            default: return 0;
-        }
-    }
-
-    private int calcularPuntosRonda(Jugador ganador) {
-        int total = 0;
-
-        for (Jugador j : jugadores) {
-            if (j == ganador) continue;
-
-            for (Carta c : j.getMano()) {
-                total += valorCarta(c);
-            }
-        }
-
-        return total;
-    }
-
-    // ==============================
-    // REINICIAR RONDA
-    // ==============================
-
-    private void reiniciarRonda() {
-        prepararNuevaRonda();
-        notificar();
-    }
-
-    private void prepararNuevaRonda() {
-
-        pila.clear();
-
-        // Nuevo mazo
-        mazo = new Mazo();
-        mazo.armarMazo();
-        mazo.mezclar();
-
-        // Vaciar manos
-        for (Jugador j : jugadores)
-            j.getMano().clear();
-
-        // Repartir 7
-        for (int i = 0; i < 7; i++)
-            for (Jugador j : jugadores)
-                j.agregarCarta(mazo.robarCarta());
-
-        // Carta inicial válida
-        Carta inicial;
-        do {
-            inicial = mazo.robarCarta();
-        } while (inicial.getValor() == Carta.Valor.Wild ||
-                inicial.getValor() == Carta.Valor.WildCuatro);
-
-        pila.add(inicial);
-
-        colorActual = inicial.getColor();
-        valorActual = inicial.getValor();
-        jugadorActual = 0;
-        direccion = false;
-    }
-
-    // ==============================
-    // OTROS
-    // ==============================
-
-    private void avanzarTurno() {
-        jugadorActual = direccion
-                ? (jugadorActual - 1 + jugadores.size()) % jugadores.size()
-                : (jugadorActual + 1) % jugadores.size();
-    }
-
-    private Jugador getJugadorPorId(String id) {
-        for (Jugador j : jugadores)
-            if (j.getId().equals(id)) return j;
-        throw new IllegalArgumentException("Jugador no encontrado: " + id);
-    }
-
-    private void rearmarDesdePila() {
-        Carta tope = pila.remove(pila.size() - 1);
-        for (Carta c : pila) mazo.agregarCarta(c);
-        pila.clear();
-        pila.add(tope);
-        mazo.mezclar();
-    }
-
-    public boolean robarCarta(String idJugador) {
+    public void robarCarta(String idJugador) {
         Jugador j = getJugadorPorId(idJugador);
 
         if (j != getJugadorActual())
             throw new IllegalStateException("No es tu turno.");
 
-        if (mazo.isEmpty())
-            rearmarDesdePila();
+        if (yaRoboEnEsteTurno)
+            throw new IllegalStateException("Solo podés robar una vez por turno.");
+
+        if (mazo.isEmpty()) {
+            mazo.rearmarDesdePila(manejadorPila.getPila());
+        }
 
         Carta robada = mazo.robarCarta();
         j.agregarCarta(robada);
 
-        boolean puede = puedeJugar(robada);
-
-        if (!puede)
-            avanzarTurno();
+        yaRoboEnEsteTurno = true;
 
         notificar();
-        return puede;
+    }
+
+    //-----------------------------------------------------------------------------------------------
+    // Reiniciar ronda
+
+    private void repartirInicial() {
+        for (int i = 0; i < 7; i++) {                                                                   //7
+            for (Jugador j : jugadores) {
+                if (mazo.isEmpty()) manejadorPila.rearmarEnMazo(mazo);
+                j.agregarCarta(mazo.robarCarta());
+            }
+        }
+    }
+
+    public void pasarTurno(String idJugador) {
+        Jugador actual = getJugadorActual();
+
+        if (!actual.getId().equals(idJugador)) {
+            throw new IllegalStateException("No es tu turno.");
+        }
+
+        if (!yaRoboEnEsteTurno) {
+            throw new IllegalStateException("Debés robar una carta antes de pasar el turno.");
+        }
+
+        manejadorTurnos.avanzarTurno();
+        yaRoboEnEsteTurno = false;
+
+        notificar();
+    }
+
+    private void reiniciarRonda() {
+        manejadorPila.limpiar();
+
+        mazo = new Mazo();
+        mazo.armarMazo();
+        mazo.mezclar();
+
+        for (Jugador j : jugadores) j.getMano().clear();
+
+        repartirInicial();
+
+        Carta inicial = manejadorPila.colocarInicialValida(mazo);
+        colorActual = inicial.getColor();
+        valorActual = inicial.getValor();
+
+        manejadorTurnos.resetear();
+        yaRoboEnEsteTurno = false;
+
+        notificar();
+    }
+
+    private Jugador getJugadorPorId(String id) {
+        for (Jugador j : jugadores) if (j.getId().equals(id)) return j;
+        throw new IllegalArgumentException("Jugador no encontrado: " + id);
     }
 }
 
 
-class InvalidPlayException extends Exception {
+class InvalidPlayException extends Exception {          //FIJARME DE MOVELO
     public InvalidPlayException(String message) {
         super(message);
     }

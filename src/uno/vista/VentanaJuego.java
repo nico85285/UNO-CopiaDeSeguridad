@@ -11,14 +11,13 @@ public class VentanaJuego extends JFrame implements Observador {
     private final Juego modelo;
     private final ControladorJuego controlador;
 
-    // Componentes UI
     private JLabel lblJugadorActual;
     private JLabel lblPuntos;
     private JLabel lblDireccion;
     private JLabel lblTope;
     private JButton btnRobar;
     private JButton btnPasar;
-    private JPanel panelMano; // botones de cartas
+    private JPanel panelMano;
     private JLabel lblConteoJugadores;
 
     public VentanaJuego(Juego modelo, ControladorJuego controlador) {
@@ -26,7 +25,6 @@ public class VentanaJuego extends JFrame implements Observador {
         this.modelo = modelo;
         this.controlador = controlador;
 
-        // Fondo correcto, con ruta correcta
         FondoPanel fondo = new FondoPanel("/Resources/ImagenFondoVentanaPrincipal.png");
         setContentPane(fondo);
         fondo.setLayout(new BorderLayout(10, 10));
@@ -42,7 +40,7 @@ public class VentanaJuego extends JFrame implements Observador {
         setSize(1200, 700);
         setLocationRelativeTo(null);
 
-        // --- Panel superior: información del juego ---
+        // PANEL SUPERIOR ! ! ! ! ! ! !
 
         JPanel panelTop = new JPanel(new GridLayout(2, 2, 10, 10));
         panelTop.setOpaque(false);
@@ -62,16 +60,16 @@ public class VentanaJuego extends JFrame implements Observador {
         lblPuntos = new JLabel("Puntos: -");
         panelTop.add(lblPuntos);
 
-        // --- Panel central: pila + mazo ---
+        // PANEL CENTRAL ! ! ! ! ! ! !
         JPanel panelCentro = new JPanel(new BorderLayout(10, 10));
         panelCentro.setOpaque(false);
 
-        // Pila (tope)
+        // Pila
         JPanel panelPila = new JPanel(new BorderLayout());
         panelPila.setOpaque(false);
         panelPila.add(lblTope, BorderLayout.CENTER);
 
-        // Mazo -> botón para robar
+        // Mazo
         btnRobar = crearBotonMazo(); // <-- usa tu botón con imagen
         JPanel panelMazo = new JPanel(new FlowLayout());
         panelMazo.setOpaque(false);
@@ -83,7 +81,7 @@ public class VentanaJuego extends JFrame implements Observador {
 
         add(panelCentro, BorderLayout.CENTER);
 
-        // --- Panel inferior: mano del jugador y acciones ---
+        // PANEL INFERIOR ! ! ! ! ! ! !
         JPanel panelBottom = new JPanel(new BorderLayout(10, 10));
         panelBottom.setOpaque(false);
 
@@ -95,6 +93,7 @@ public class VentanaJuego extends JFrame implements Observador {
         btnPasar = new JButton("Pasar turno");
         btnPasar.addActionListener(e -> onPasar());
         panelAcciones.add(btnPasar);
+
 
 
         JScrollPane scroll = new JScrollPane(panelMano,
@@ -111,73 +110,50 @@ public class VentanaJuego extends JFrame implements Observador {
         add(panelBottom, BorderLayout.SOUTH);
     }
 
-    // ----------------- Handlers -----------------
+
+
+
 
     private void onRobar() {
         try {
-            boolean puedeJugar = controlador.robarCarta();
-            // el modelo notificará y la vista se actualizará
-            if (puedeJugar) {
-                JOptionPane.showMessageDialog(this,
-                        "Robaste una carta que puedes jugar. Puedes jugarla ahora.",
-                        "Robar carta", JOptionPane.INFORMATION_MESSAGE);
-            }
+            controlador.robarCarta();
         } catch (Exception ex) {
-            // controlador.robarCarta no lanza checked en tu versión, pero por las dudas:
-            JOptionPane.showMessageDialog(this, "Error al robar: " + ex.getMessage(),
+            JOptionPane.showMessageDialog(this,
+                    "Error al robar: " + ex.getMessage(),
                     "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void onPasar() {
-        // Pasar simplemente avanza el turno en el modelo.
-        // No exponemos un método 'pasar' en controlador -> lo simulamos robando sin robar:
-        // Llamamos directamente al modelo para avanzarTurno? mejor usar robarCarta con control?
-        // En tu modelo hay avanzarTurno() privado; para pasar usamos jugarCarta nula no establecida.
-        // Simpliquemos: llamamos al modelo para avanzar turno vía un pequeño truco:
         try {
-            // Para respetar MVC usamos controlador.robarCarta() pero no es ideal.
-            // Mejor: avanzamos el turno jugando una carta inválida no es correcto.
-            // Así que usaremos reflection-like approach avoided: en vez de eso,
-            // pedimos al usuario confirmar y llamamos a robarCarta y luego descartar la carta.
-            // Para simplicidad semántica realizamos oficialmente un avance de turno
-            // mediante jugarCarta de una carta inexistente está mal; por tanto vamos a:
-            // -> llamar al modelo para robar una carta y luego pasar el turno si no puede jugar.
-            boolean puedeJugar = controlador.robarCarta();
-            if (!puedeJugar) {
-                // si no puede jugar la carta robada, ya se avanzó el turno en el modelo
-                // (esa es la semántica que definiste)
-            } else {
-                // si puede jugarla, mostramos y dejamos que el usuario la juegue o la descarte
-                JOptionPane.showMessageDialog(this, "Robaste una carta que puedes jugar.");
-            }
+            controlador.pasarTurno();
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Error al pasar: " + ex.getMessage());
+            JOptionPane.showMessageDialog(this,
+                    "Error al pasar turno: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    // ----------------- Vista <-> Modelo -----------------
+    //
 
-
-    //Crea el botón visual para representar una carta en la mano.
 
     private JButton crearBotonCarta(Carta carta) {
-        String iconPath = carta.toString() + ".png"; // ejemplo: Rojo_Uno.png
+        String iconPath = carta.toString() + ".png";
         JButton btn = new JButton();
 
-        // Intentar cargar icono si existe en recursos del proyecto
         try {
             java.net.URL resource = getClass().getResource("/Resources/" + iconPath);
             if (resource != null) {
                 ImageIcon ico = new ImageIcon(resource);
-                // escalamos icon un poco si es muy grande
-                Image img = ico.getImage().getScaledInstance(100, 150, Image.SCALE_SMOOTH);
+
+                Image img = ico.getImage().getScaledInstance(100, 150, Image.SCALE_SMOOTH); // ESCALADO
                 btn.setIcon(new ImageIcon(img));
                 btn.setText("");
             } else {
-                // fallback a texto
+
                 btn.setText(carta.toString());
             }
+
         } catch (Exception ex) {
             btn.setText(carta.toString());
         }
@@ -194,11 +170,9 @@ public class VentanaJuego extends JFrame implements Observador {
 
 
     private void onClickCarta(Carta carta) {
-        // Si no es el turno del usuario actual, avisar
-        String jugadorIdActual = modelo.getJugadorActual().getId();
-        // suponemos que esta ventana representa al jugador cuyo turno sea local; si es multijugador local,
-        // esto está bien; si hay jugadores remotos, habría que controlar identidad.
-        // Llamamos al controlador para jugar la carta (pasa el color si es Wild)
+
+        String jugadorIdActual = modelo.getJugadorActual().getId();  // PARA CUANDO HAGA EL MULTIJUGADOR
+
         Carta.Color colorElegido = null;
         if (carta.getColor() == Carta.Color.Wild) {
             colorElegido = pedirColorWild();
@@ -207,7 +181,7 @@ public class VentanaJuego extends JFrame implements Observador {
 
         try {
             controlador.jugarCarta(carta, colorElegido);
-            // la actualización de UI vendrá por el modelo.notificar() que llama actualizar()
+
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "No se pudo jugar la carta: " + ex.getMessage(),
                     "Movimiento inválido", JOptionPane.ERROR_MESSAGE);
@@ -216,7 +190,7 @@ public class VentanaJuego extends JFrame implements Observador {
 
     private Carta.Color pedirColorWild() {
         Carta.Color[] opciones = Carta.Color.values();
-        // construir un array de strings con colores, excluyendo Wild como opción selectable
+
         String[] nombres = java.util.Arrays.stream(opciones)
                 .filter(c -> c != Carta.Color.Wild)
                 .map(Enum::name)
@@ -233,7 +207,6 @@ public class VentanaJuego extends JFrame implements Observador {
 
         if (sel < 0) return null;
 
-        // mapear index a enum (teniendo en cuenta que filramos Wild)
         java.util.List<Carta.Color> lista = new java.util.ArrayList<>();
         for (Carta.Color c : opciones) if (c != Carta.Color.Wild) lista.add(c);
 
@@ -279,7 +252,7 @@ public class VentanaJuego extends JFrame implements Observador {
     }
 
 
-    // ----------------- Observer -----------------
+    // OBSERVER
 
     @Override
     public void actualizar() {
@@ -288,8 +261,8 @@ public class VentanaJuego extends JFrame implements Observador {
 
     private void refreshUI() {
 
-        //CARTEL DE PUNTUACION AL TERMINAR UNA RONDA
         Jugador ganadorRonda = modelo.getGanadorRonda();
+
         if (modelo.getGanadorRonda() != null) {
 
             StringBuilder msg = new StringBuilder("¡" + modelo.getGanadorRonda().getId() +
@@ -304,12 +277,11 @@ public class VentanaJuego extends JFrame implements Observador {
 
             JOptionPane.showMessageDialog(this, msg.toString(), "Fin de la ronda", JOptionPane.INFORMATION_MESSAGE);
 
-            // limpiar el ganador de la ronda para no repetir cartel
             modelo.clearGanadorRonda();
         }
 
-        // 🔥 1) Verificar si hay ganador antes de refrescar nada
-        if (modelo.getGanadorPartida() != null) {
+
+        if (modelo.getGanadorPartida() != null) {                                    // VERIFICA GANADOR O NO
             Jugador ganador = modelo.getGanadorPartida();
 
             JOptionPane.showMessageDialog(this,
@@ -321,7 +293,7 @@ public class VentanaJuego extends JFrame implements Observador {
             return;
         }
 
-        // 🔥 2) Todo lo demás sigue igual...
+
         Jugador actual = modelo.getJugadorActual();
         lblPuntos.setText("Puntos actuales: " + actual.getPuntaje());
         lblJugadorActual.setText("Turno: " + actual.getId());
@@ -335,8 +307,8 @@ public class VentanaJuego extends JFrame implements Observador {
                         " | Total jugadores: " + modelo.getCantidadJugadores()
         );
 
-        // Tope
-        Carta tope = modelo.getTope();
+
+        Carta tope = modelo.getTope();                                          // TOPE
         if (tope != null) {
             lblTope.setIcon(cargarIconoCarta(tope));
             lblTope.setText("");
@@ -345,8 +317,8 @@ public class VentanaJuego extends JFrame implements Observador {
             lblTope.setText(" - ");
         }
 
-        // Mano del jugador
-        panelMano.removeAll();
+
+        panelMano.removeAll();                                                      //MANO
         List<Carta> mano = modelo.getManoJugador(actual.getId());
         if (mano != null) {
             for (Carta c : mano) {

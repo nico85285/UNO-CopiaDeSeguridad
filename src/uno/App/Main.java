@@ -7,7 +7,6 @@ import javax.swing.*;
 import java.util.Scanner;
 
 public class Main {
-
     public static void main(String[] args) {
 
         Scanner sc = new Scanner(System.in);
@@ -27,20 +26,22 @@ public class Main {
             }
         }
 
-        // =============================================
+
         //  1) INTERFAZ GRÁFICA
-        // =============================================
+
         if (opcion == 1) {
             System.out.println("Iniciando interfaz gráfica...");
+
             SwingUtilities.invokeLater(() -> {
                 new MenuPrincipal().setVisible(true);
             });
             return;
         }
 
-        // =============================================
-        //  2) MODO CONSOLA
-        // =============================================
+
+        //  2)CONSOLA
+
+
         System.out.print("¿Cuántos jugadores? (2 a 10): ");
 
         int n = 0;

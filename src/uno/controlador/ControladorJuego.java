@@ -14,8 +14,12 @@ public class ControladorJuego {
         modelo.jugarCarta(modelo.getJugadorActual().getId(), carta, colorElegido);
     }
 
-    public boolean robarCarta() {
-        return modelo.robarCarta(modelo.getJugadorActual().getId());
+    public void robarCarta() {
+        modelo.robarCarta(modelo.getJugadorActual().getId());
+    }
+
+    public void pasarTurno() {
+        modelo.pasarTurno(modelo.getJugadorActual().getId());
     }
 
     public Juego getModelo(){ return modelo; }

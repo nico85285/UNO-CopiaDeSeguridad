@@ -9,9 +9,7 @@ public class SistemaPuntuacion {
 
     private static final String ARCHIVO = "puntuacionUNO.txt";
 
-    // ============================
-    // CARGAR RANKING
-    // ============================
+
     public static List<RegistroPuntaje> cargarPuntos() {
         List<RegistroPuntaje> lista = new ArrayList<>();
 
@@ -28,16 +26,13 @@ public class SistemaPuntuacion {
             }
 
         } catch (Exception e) {
-            // si no existe el archivo, no hago nada
+            // SI NO EXISTE ...
         }
 
         return lista;
     }
 
 
-    // ============================
-    // GUARDAR RANKING
-    // ============================
     public static void guardarPuntos(List<RegistroPuntaje> puntos) {
         try (PrintWriter pw = new PrintWriter(new FileWriter(ARCHIVO))) {
             for (RegistroPuntaje r : puntos) {
@@ -50,44 +45,34 @@ public class SistemaPuntuacion {
     }
 
 
-    // ============================
-    // ACTUALIZAR PUNTAJE ACUMULADO
-    // ============================
-    public static void agregarScore(Jugador ganador) {
+
+    public static void agregarScore(Jugador ganador) {          //axtualiza
 
         List<RegistroPuntaje> lista = cargarPuntos();
 
         boolean encontrado = false;
 
-        // Si el jugador ya existe en el ranking, sumar sus puntos
-        for (RegistroPuntaje r : lista) {
+        for (RegistroPuntaje r : lista) {   //si ya existe
             if (r.nombre.equals(ganador.getId())) {
-                r.puntos += ganador.getPuntaje();  // ← SUMA ACUMULADA
+                r.puntos += ganador.getPuntaje();
                 encontrado = true;
                 break;
             }
         }
 
-        // Si no existe, agregarlo nuevo
         if (!encontrado) {
             lista.add(new RegistroPuntaje(ganador.getId(), ganador.getPuntaje()));
         }
 
-        // Ordenar de mayor a menor
         lista.sort((a, b) -> Integer.compare(b.puntos, a.puntos));
 
-        // Mantener solo TOP 5
-        if (lista.size() > 5) {
+        if (lista.size() > 5) {                                                         // 5
             lista = lista.subList(0, 5);
         }
 
         guardarPuntos(lista);
     }
 
-
-    // ============================
-    // CLASE INTERNA
-    // ============================
     public static class RegistroPuntaje {
         public String nombre;
         public int puntos;

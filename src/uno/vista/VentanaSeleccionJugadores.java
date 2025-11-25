@@ -20,7 +20,7 @@ public class VentanaSeleccionJugadores extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout(10, 10));
 
-        // Panel superior: selector de cantidad
+
         JPanel panelTop = new JPanel();
         panelTop.add(new JLabel("Cantidad de jugadores (2 a 10):"));
 
@@ -30,17 +30,17 @@ public class VentanaSeleccionJugadores extends JFrame {
         panelTop.add(selectorCantidad);
         add(panelTop, BorderLayout.NORTH);
 
-        // Panel donde se generarán los campos de texto
+        //TEXTO
         panelNombres = new JPanel();
         panelNombres.setLayout(new GridLayout(10, 1, 5, 5));
         add(panelNombres, BorderLayout.CENTER);
 
-        // Botón generar jugadores
+
         JButton btnGenerar = new JButton("Generar campos");
         btnGenerar.addActionListener(e -> generarCampos());
         panelTop.add(btnGenerar);
 
-        // Botón para comenzar el juego
+
         JButton btnJugar = new JButton("Comenzar partida");
         btnJugar.addActionListener(e -> iniciarJuego());
         add(btnJugar, BorderLayout.SOUTH);
@@ -82,14 +82,14 @@ public class VentanaSeleccionJugadores extends JFrame {
             nombres[i] = nombre;
         }
 
-        // crear modelo y controlador
+
         Juego modelo = new Juego(nombres);
         ControladorJuego controlador = new ControladorJuego(modelo);
 
-        // abrir ventana del juego
+
         VentanaJuego ventanaJuego = new VentanaJuego(modelo, controlador);
         ventanaJuego.setVisible(true);
 
-        this.dispose(); // cerrar esta ventana
+        this.dispose(); // PARA CERRAR ESTA VENTANA
     }
 }

@@ -20,14 +20,14 @@ public class MenuPrincipal extends JFrame {
         add(btnJugar);
         add(btnPuntuaciones);
 
-        // Acción del botón Jugar
+
         btnJugar.addActionListener(e -> {
             VentanaSeleccionJugadores ventana = new VentanaSeleccionJugadores();
             ventana.setVisible(true);
             this.dispose();
         });
 
-        // Acción del botón Puntuaciones
+
         btnPuntuaciones.addActionListener(e -> {
             VentanaPuntuaciones ventana = new VentanaPuntuaciones();
             ventana.setVisible(true);

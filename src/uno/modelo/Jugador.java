@@ -1,7 +1,7 @@
 package uno.modelo;
 
 import java.util.ArrayList;
-import java.util.List;
+
 
 public class Jugador {
     private String id;
@@ -22,12 +22,6 @@ public class Jugador {
         mano.add(c);
     }
 
-    public void agregarCartas(Carta[] cartas){   // para robar varias de una
-        for(Carta c : cartas){
-            mano.add(c);
-        }
-    }
-
     public void removerCarta(Carta c){
         mano.remove(c);
     }
@@ -40,7 +34,4 @@ public class Jugador {
 
     public void sumarPuntos(int pts) { puntaje += pts; }
 
-    public int getCantidadCartas(){
-        return mano.size();
-    }
 }
